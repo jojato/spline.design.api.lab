@@ -1,2 +1,3 @@
-# spline.design.api.lab
-spline.design 3D tool experiments
+# Spline.design 3D tool experiments
+
+## 3D music visualization  

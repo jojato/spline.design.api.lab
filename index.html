@@ -1,0 +1,117 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Audio Reactive Spline (Direct Scale)</title>
+  <link rel="stylesheet" href="./styles.css">
+  <link rel="shortcut icon" href="./static/play.svg" type="image/x-icon">
+</head>
+<body>
+  <canvas id="canvas3d"></canvas>
+  <audio id="audio" src="./static/lost_signalz_2.mp3" controls></audio>
+
+  <script type="module">
+    import { Application } from 'https://unpkg.com/@splinetool/runtime@1.9.93/build/runtime.js';
+
+    const canvas = document.getElementById('canvas3d');
+    const audio = document.getElementById('audio');
+    const playButton = document.querySelector('.play-button');
+
+
+    const app = new Application(canvas);
+    {{/*  Spline export viewer .splinecode  */}}
+    {{/*  https://docs.spline.design/doc/exporting-as-spline-viewer/docoQp6On9ht#-related-docs  */}}
+    await app.load('https://prod.spline.design/DAxpsOh041HCjJzA/scene.splinecode')
+    {{/*  await app.load('./static/scene.splinecode')  */}}
+
+
+    {{/*  select spline objects  */}}
+    const bassSphere = app.findObjectByName('bassSphere');
+    const midSphere = app.findObjectByName('midSphere');
+    const liquid01 = app.findObjectByName('liquid01');
+    const liquid02 = app.findObjectByName('liquid02');
+    const liquid03 = app.findObjectByName('liquid03');
+    const liquid04 = app.findObjectByName('liquid04');
+
+    {{/*  console.log(bassLiquid)  */}}
+
+    
+    const context = new AudioContext();
+    const src = context.createMediaElementSource(audio);
+    const analyser = context.createAnalyser();
+
+    src.connect(analyser);
+    analyser.connect(context.destination);
+    analyser.fftSize = 256;
+
+    const bufferLength = analyser.frequencyBinCount;
+    const dataArray = new Uint8Array(bufferLength);
+
+    
+    function getAverage(arr, from, to) {
+      let sum = 0;
+      let count = 0;
+      for (let i = from; i <= to; i++) { sum += arr[i]; count++; }
+      return count ? sum / count : 0;
+    }
+
+    {{/* audio visualization  */}}
+    function animate() {
+      requestAnimationFrame(animate);
+      analyser.getByteFrequencyData(dataArray);
+
+      const bass = getAverage(dataArray, 0, 10);
+      const mid = getAverage(dataArray, 11, 40);
+      const treble = getAverage(dataArray, 41, 80);
+
+      const bassScale = 0.6 + (bass / 128);
+      const midScale = 0.6 + (mid / 128);
+      const trebleScale = 0.6 + (treble / 128);
+
+      {{/*  console.log(bassScale, midScale)  */}}
+
+      if (bassSphere) bassSphere.scale.set(bassScale, bassScale, bassScale);
+      if (midSphere) midSphere.scale.set(midScale, midScale, midScale);
+      if (liquid01) liquid01.scale.set(trebleScale, trebleScale, trebleScale);
+      if (liquid02) liquid02.scale.set(trebleScale, trebleScale, trebleScale);
+      if (liquid03) liquid03.scale.set(trebleScale, trebleScale, trebleScale);
+      if (liquid04) liquid04.scale.set(trebleScale, trebleScale, trebleScale);
+    }
+
+    audio.onplay = () => {
+      if (context.state === 'suspended') context.resume();
+      animate()
+      playButton.classList.remove('active')
+    };
+    audio.onended = () => {
+      playButton.classList.add('active')
+    }
+    playButton.addEventListener('click', (event) => {
+      if(audio.paused) {
+        playButton.classList.remove('active')
+        playButton.blur()
+        audio.play()
+      }
+    })
+    document.addEventListener('keypress', (key) => {
+      if (key.code === "Space") {
+        if (audio.paused) {
+          audio.play();
+          playButton.classList.remove('active')
+        } else {
+          audio.pause();
+          playButton.classList.add('active')
+        }
+      } else {
+        console.log(key.code);
+      }
+    });
+  </script>
+  <button class="play-button active">
+    <svg width="24px" height="24px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M16.6582 9.28638C18.098 10.1862 18.8178 10.6361 19.0647 11.2122C19.2803 11.7152 19.2803 12.2847 19.0647 12.7878C18.8178 13.3638 18.098 13.8137 16.6582 14.7136L9.896 18.94C8.29805 19.9387 7.49907 20.4381 6.83973 20.385C6.26501 20.3388 5.73818 20.0469 5.3944 19.584C5 19.053 5 18.1108 5 16.2264V7.77357C5 5.88919 5 4.94701 5.3944 4.41598C5.73818 3.9531 6.26501 3.66111 6.83973 3.6149C7.49907 3.5619 8.29805 4.06126 9.896 5.05998L16.6582 9.28638Z" stroke="#555555" stroke-width="2" stroke-linejoin="round"/>
+    </svg>
+  </button>
+</body>
+</html>
